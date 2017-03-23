@@ -18,6 +18,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
+using Windows.UI.Xaml.Media;
 
 namespace Quran.Windows.Views
 {
@@ -588,5 +589,53 @@ namespace Quran.Windows.Views
             ViewModel.NextTrack();
         }
         #endregion
+
+        private void AudioSetRepeat(object sender, RoutedEventArgs e)
+        {
+            // FontIcon  
+            FontIcon fi = new FontIcon();
+            fi.FontFamily = new FontFamily("Candara");
+            fi.FontSize = 23;
+
+            if (ViewModel.RepeatCount == 0)
+            {
+                ViewModel.RepeatCount = 1;
+                fi.Glyph = "\u2460";
+                AudioSetRepeatButton.Icon = fi;
+
+            }
+            else if(ViewModel.RepeatCount == 1)
+            {
+                ViewModel.RepeatCount = 2;
+                fi.Glyph = "\u2461";
+                AudioSetRepeatButton.Icon = fi;
+
+            }
+            else if (ViewModel.RepeatCount == 2)
+            {
+                ViewModel.RepeatCount = 3;
+                fi.Glyph = "\u2462";
+                AudioSetRepeatButton.Icon = fi;
+
+            }
+            else if (ViewModel.RepeatCount == 3)
+            {
+                ViewModel.RepeatCount = -1;
+                fi.Glyph = "\u267E";
+                AudioSetRepeatButton.Icon = fi;
+
+            }
+            else if (ViewModel.RepeatCount == -1)
+            {
+                ViewModel.RepeatCount = 0;
+                AudioSetRepeatButton.Icon = new SymbolIcon(Symbol.RepeatAll);
+            }
+            else
+            {
+                AudioSetRepeatButton.Icon = new SymbolIcon(Symbol.RepeatAll);
+            }
+
+            ViewModel.RepeatTrack(ViewModel.RepeatCount);
+        }
     }
 }

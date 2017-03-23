@@ -39,7 +39,8 @@ namespace Quran.Windows.Audio
         private ManualResetEvent _backgroundTaskStarted = new ManualResetEvent(false);
         private BackgroundTaskDeferral _deferral; // Used to keep task alive
         private TelemetryClient telemetry = new TelemetryClient();
-
+        private int repeatCount = 0;
+        private int currentAyahRepeatCount = 0;
         public void Run(IBackgroundTaskInstance taskInstance)
         {
             Debug.WriteLine("Background Audio Task " + taskInstance.Task.Name + " starting...");
@@ -211,6 +212,26 @@ namespace Quran.Windows.Audio
                     return;
                 }
             }
+
+            RepeatTrackMessage repeatTrackMessage;
+            if (MessageService.TryParseMessage(e.Data, out repeatTrackMessage))
+            {
+                // User has chosen to skip track from app context.
+                repeatCount = repeatTrackMessage.RepeatCount;
+                Debug.WriteLine(String.Format("Repeat track request, RepeatCount ({0})", repeatCount));
+
+                if (repeatCount == 0)
+                {
+                    BackgroundMediaPlayer.Current.IsLoopingEnabled = false;
+                }
+                else if(currentAyahRepeatCount < repeatCount || repeatCount==-1)
+                {
+                    BackgroundMediaPlayer.Current.IsLoopingEnabled = true;
+                }
+
+                return;
+            }
+
         }
 
         private async Task ChangeTrack(QuranAudioTrack newTrack)
@@ -378,6 +399,7 @@ namespace Quran.Windows.Audio
         async void SkipToPrevious()
         {
             smtc.PlaybackStatus = MediaPlaybackStatus.Changing;
+            currentAyahRepeatCount = 0;
 
             if (_playbackList.CurrentItemIndex == 0)
             {
@@ -398,7 +420,7 @@ namespace Quran.Windows.Audio
         void SkipToNext()
         {
             smtc.PlaybackStatus = MediaPlaybackStatus.Changing;
-
+            currentAyahRepeatCount = 0;
             if (_playbackList.CurrentItemIndex == _playbackList.Items.Count - 1)
             {
                 MediaPlayerMediaEnded(BackgroundMediaPlayer.Current, null);
@@ -416,16 +438,53 @@ namespace Quran.Windows.Audio
         /// <param name="args"></param>
         void PlaybackListCurrentItemChanged(MediaPlaybackList sender, CurrentMediaPlaybackItemChangedEventArgs args)
         {
-            // Get the new item
-            var item = args.NewItem;
+
+            if (repeatCount > 0 )
+            {
+                // Get the new item
+                if (args.OldItem == null)
+                {
+                    currentAyahRepeatCount = 0;
+                    Debug.WriteLine("First ayah in the list, CurrentAyahRepeatCount({0}), PrevAyah(NA), NextAyah({1})", currentAyahRepeatCount, (int)args.NewItem.Source.CustomProperties[AyahKey]);
+                    //per current implementation bismillah ayah will always be first in the list
+                    if (QuranUtils.IsBismillah(QuranAyah.FromString(string.Format("{0}:{1}", args.NewItem.Source.CustomProperties[SurahKey], args.NewItem.Source.CustomProperties[AyahKey]))))
+                    {
+                        currentAyahRepeatCount = repeatCount;
+                        Debug.WriteLine("It is a Bismillah ayah, CurrentAyahRepeatCount({0}), PrevAyah(NA), NextAyah({1})", currentAyahRepeatCount, (int)args.NewItem.Source.CustomProperties[AyahKey]);
+                    }
+                }
+                //ayah just repeated
+                else if (args.NewItem != null && (int)args.NewItem.Source.CustomProperties[AyahKey] == (int)args.OldItem.Source.CustomProperties[AyahKey])
+                {
+                    currentAyahRepeatCount = currentAyahRepeatCount + 1;
+                    Debug.WriteLine("First ayah in the list, CurrentAyahRepeatCount({0}), PrevAyah({1}), NextAyah({2})", currentAyahRepeatCount, (int)args.OldItem.Source.CustomProperties[AyahKey], (int)args.NewItem.Source.CustomProperties[AyahKey]);
+                }
+                //ayah just changed
+                else if (args.NewItem != null && (int)args.NewItem.Source.CustomProperties[AyahKey] != (int)args.OldItem.Source.CustomProperties[AyahKey])
+                {
+                    currentAyahRepeatCount = 0;
+                    Debug.WriteLine("Next ayah in the list, CurrentAyahRepeatCount({0}), PrevAyah({2}), NextAyah({1})", currentAyahRepeatCount, (int)args.NewItem.Source.CustomProperties[AyahKey], (int)args.OldItem.Source.CustomProperties[AyahKey]);
+                }
+
+                if (currentAyahRepeatCount < repeatCount)
+                {
+                    BackgroundMediaPlayer.Current.IsLoopingEnabled = true;
+                    Debug.WriteLine(String.Format("Ayah Repeat Condition True, Current Count({0}),Expected Count ({1})", currentAyahRepeatCount, repeatCount));
+                }
+                else
+                {
+                    BackgroundMediaPlayer.Current.IsLoopingEnabled = false;
+                    Debug.WriteLine(String.Format("Ayah Repeat Condition False, Current Count({0}),Expected Count ({1})", currentAyahRepeatCount, repeatCount));
+                }
+            }
 
             // Update the system view
-            UpdateUVCOnNewTrack(item);
+            UpdateUVCOnNewTrack(args.NewItem);
 
             // Get the current track
-            if (item != null && item.Source.CustomProperties.ContainsKey(QuranTrackKey))
+            if (args.NewItem != null && args.NewItem.Source.CustomProperties.ContainsKey(QuranTrackKey))
             {
-                var json = item.Source.CustomProperties[QuranTrackKey] as string;
+                var json = args.NewItem.Source.CustomProperties[QuranTrackKey] as string;
                 MessageService.SendMessageToForeground(new TrackChangedMessage(QuranAudioTrack.FromString(json)));
             }      
         }
@@ -476,6 +535,8 @@ namespace Quran.Windows.Audio
         {
             // You get some time here to save your state before process and resources are reclaimed
             Debug.WriteLine("MyBackgroundAudioTask " + sender.Task.TaskId + " Cancel Requested...");
+            currentAyahRepeatCount = 0;
+            repeatCount = 0;
             try
             {
                 // immediately set not running

@@ -31,6 +31,8 @@ namespace Quran.Core.Interfaces
         /// </summary>
         void Previous();
 
+        void RepeatTrack(int repeatCount);
+
         /// <summary>
         /// Stops the playback.
         /// </summary>

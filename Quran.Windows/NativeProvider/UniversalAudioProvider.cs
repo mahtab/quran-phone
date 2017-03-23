@@ -78,6 +78,11 @@ namespace Quran.Windows.NativeProvider
             MessageService.SendMessageToBackground(new SkipPreviousMessage());
         }
 
+        public void RepeatTrack(int repeatCount)
+        {
+            MessageService.SendMessageToBackground(new RepeatTrackMessage(repeatCount));
+        }
+
         public AudioPlayerPlayState State
         {
             get; set;

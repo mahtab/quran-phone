@@ -118,8 +118,8 @@ namespace Quran.Core.Utils
             {
                 return false;
             }
-            
-            return await FileUtils.FileExists(baseDirectory, BismillahFile);
+            bool fileExist = await (FileUtils.FileExists(baseDirectory, BismillahFile));
+            return !fileExist;
         }
 
         public static bool DoesRequireBismillah(QuranAudioTrack request)

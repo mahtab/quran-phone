@@ -170,7 +170,7 @@
     </Grid>
     <Page.BottomAppBar>
         <CommandBar IsOpen="False" ClosedDisplayMode="Minimal">
-            <!--<AppBarButton Icon="RepeatAll" Click="AudioSetRepeat" x:Name="AudioSetRepeatButton" Label="{x:Bind ViewModel.Strings.repeat_ayah}"/>-->
+            <AppBarButton Icon="RepeatAll" Click="AudioSetRepeat"  x:Name="AudioSetRepeatButton" Label="{x:Bind ViewModel.Strings.repeat_ayah}"/>
             <AppBarButton Icon="Cancel" Click="AudioStop" x:Name="AudioStopButton" Label="{x:Bind ViewModel.Strings.cancel}"/>
             <AppBarButton Icon="Previous" Click="AudioSkipBackward" x:Name="AudioSkipBackwardButton" Label="{x:Bind ViewModel.Strings.previous}"/>
             <AppBarButton Icon="Play" Click="AudioPlay" x:Name="AudioPlayButton" Label="{x:Bind ViewModel.Strings.recite}"/>
